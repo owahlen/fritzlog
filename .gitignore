@@ -4,3 +4,21 @@
 *.jar
 *.war
 *.ear
+
+# IDE Files #
+.classpath
+.project
+.settings
+*.launch
+*.tmproj
+*.ipr
+*.iml
+*.iws
+*.log
+*.ser
+.idea
+.DS_Store
+
+# Build Results #
+build
+out
