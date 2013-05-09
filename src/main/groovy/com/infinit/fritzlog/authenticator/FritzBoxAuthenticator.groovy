@@ -90,7 +90,7 @@ class FritzBoxAuthenticator {
 				feedbackHtml = html
 			}
 		}
-		String sid = (GPathResult) feedbackHtml.depthFirst().find { it.name = 'input' && it.@name == 'sid' }.@value
+		String sid = feedbackHtml.depthFirst().find { it.name() == 'INPUT' && it.@name == 'sid' }.@value
 		if (!sid || sid ==~ /0+/) {
 			throw new AuthenticationException("unable to authenticate against Fritz Box")
 		}

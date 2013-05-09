@@ -1,6 +1,6 @@
 package com.infinit.fritzlog
 
-import com.infinit.fritzlog.adapter.FritzBoxAdapter
+import com.infinit.fritzlog.facade.FritzBoxFacade
 import org.apache.log4j.PropertyConfigurator
 
 /**
@@ -10,7 +10,7 @@ class Main {
 
 	static main(args) {
 		configureLogger()
-		FritzBoxAdapter adapter = new FritzBoxAdapter(host: "192.168.2.1", password: "gomfia")
+		FritzBoxFacade adapter = new FritzBoxFacade(host: "192.168.2.1", password: "gomfia")
 		System.out << adapter.eventReader
 	}
 

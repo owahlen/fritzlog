@@ -59,6 +59,7 @@ dependencies {
 	compile('log4j:log4j:1.2.17') {
 		transitive = false
 	}
+	compile('joda-time:joda-time:2.2')
 
 	testCompile 'junit:junit:4.11'
 	testCompile 'net.sourceforge.htmlunit:htmlunit:2.12'
