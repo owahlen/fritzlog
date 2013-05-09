@@ -6,6 +6,7 @@ log4j {
 	appender.'A1.layout.ConversionPattern' = "%d [%t] %-5p %c %x - %m%n"
 
 	logger {
+		com.infinit.fritzlog = 'WARN'
 		org.apache.http.wire = 'DEBUG'
 	}
 

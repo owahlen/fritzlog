@@ -13,6 +13,10 @@ idea {
 		languageLevel = '1.7'
 	}
 	module {
+		inheritOutputDirs = false
+		outputDir = file('build/classes/main')
+		testOutputDir = file('build/classes/test')
+
 		iml {
 			withXml { xml ->
 				Node moduleNode = xml.asNode()
@@ -26,10 +30,10 @@ idea {
 							SOURCES()
 						}
 					}
-					orderEntry(type: 'module-library', scope:"RUNTIME") {
+					orderEntry(type: 'module-library', scope:"TEST") {
 						library {
 							CLASSES {
-								root(url: 'jar://\$MODULE_DIR\$/build/libs/fritzlog.jar!/')
+								root(url: 'file://\$MODULE_DIR\$/build/resources/test')
 							}
 							JAVADOCK()
 							SOURCES()
@@ -57,6 +61,7 @@ dependencies {
 	}
 
 	testCompile 'junit:junit:4.11'
+	testCompile 'net.sourceforge.htmlunit:htmlunit:2.12'
 }
 
 

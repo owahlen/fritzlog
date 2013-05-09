@@ -15,7 +15,7 @@ class Main {
 	}
 
 	private static void configureLogger() {
-		ConfigObject config = new ConfigSlurper().parse(Main.getResource('/log4j.groovy'))
+		ConfigObject config = new ConfigSlurper().parse(Main.getResource('/mainLog4j.groovy'))
 		PropertyConfigurator.configure(config.toProperties())
 	}
 
