@@ -3,14 +3,19 @@ apply plugin: 'groovy'
 apply plugin: 'application'
 apply plugin: 'idea'
 
+def jdkVersion = '1.7'
+
+sourceCompatibility = jdkVersion
+targetCompatibility = jdkVersion
+
 mainClassName = 'com.infinit.fritzlog.Main'
 
 // The idea closure configure the idea plugin.
 // The command "gradle idea" will setup a reasonable idea structure
 idea {
 	project {
-		jdkName = '1.7'
-		languageLevel = '1.7'
+		jdkName = jdkVersion
+		languageLevel = jdkVersion
 	}
 	module {
 		inheritOutputDirs = false
