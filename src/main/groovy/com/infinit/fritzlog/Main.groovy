@@ -9,6 +9,10 @@ import org.apache.log4j.PropertyConfigurator
  */
 class Main {
 
+	/**
+	 * main method
+	 * @param args
+	 */
 	static main(args) {
 		configureLogger()
 		FritzBoxFacade facade = new FritzBoxFacade("192.168.2.1", "gomfia")

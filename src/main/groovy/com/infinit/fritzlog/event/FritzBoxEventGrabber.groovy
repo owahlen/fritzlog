@@ -1,14 +1,20 @@
 package com.infinit.fritzlog.event
 
+import com.gargoylesoftware.htmlunit.ElementNotFoundException
+import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException
 import com.gargoylesoftware.htmlunit.WebClient
+import com.gargoylesoftware.htmlunit.html.HtmlElement
 import com.gargoylesoftware.htmlunit.html.HtmlPage
 import com.gargoylesoftware.htmlunit.html.HtmlTableCell
 import com.gargoylesoftware.htmlunit.html.HtmlTableRow
+import com.infinit.fritzlog.exceptions.EventGrabberException
 import org.apache.http.client.utils.URIBuilder
 import org.joda.time.DateTime
 import org.joda.time.DateTimeZone
 import org.joda.time.format.DateTimeFormat
 import org.joda.time.format.DateTimeFormatter
+
+import javax.naming.AuthenticationException
 
 /**
  * Extract Events from the Fritz!Box System->Events menu
@@ -16,6 +22,8 @@ import org.joda.time.format.DateTimeFormatter
 class FritzBoxEventGrabber {
 
 	String sid
+
+	final static Integer NUMBER_OF_SYSLOG_COLUMNS = 3
 
 	private String host
 	private WebClient webClient
@@ -26,6 +34,9 @@ class FritzBoxEventGrabber {
 	 * @return list of Events
 	 */
 	List<Event> grabEvents(EventType eventType) {
+		if (sid == null) {
+			throw new EventGrabberException("FritzBoxEventGrabber is not initialized with sid")
+		}
 		HtmlPage syslogPage = getSyslogPage(eventType)
 		List<Event> events = extractEventsFromSyslogPage(syslogPage)
 		events.sort { it.timestamp }
@@ -39,8 +50,24 @@ class FritzBoxEventGrabber {
 	 */
 	private HtmlPage getSyslogPage(EventType eventType) {
 		URL syslogUrl = createSyslogUrl(eventType)
-		HtmlPage syslogPage = webClient.getPage(syslogUrl)
+		HtmlPage syslogPage
+		try {
+			syslogPage = webClient.getPage(syslogUrl)
+		} catch (FailingHttpStatusCodeException | IOException e) {
+			throw new EventGrabberException("Unable to download syslog from url $syslogUrl", e)
+		}
+		validateSyslogLoaded(syslogPage)
 		return syslogPage
+	}
+
+	/**
+	 * Check that the navigation to the syslog page was successful. Throw a EventGrabberException otherwise.
+	 * @param syslogPage the syslog page to be validated
+	 */
+	private validateSyslogLoaded(HtmlPage syslogPage) {
+		if (syslogPage.getFirstByXPath("//form[@action='/system/syslog.lua']") == null) {
+			throw new EventGrabberException("Validation of syslog page failed")
+		}
 	}
 
 	/**
@@ -50,9 +77,15 @@ class FritzBoxEventGrabber {
 	 */
 	private URL createSyslogUrl(EventType eventType) {
 		URIBuilder uriBuilder = new URIBuilder("http://${host}/system/syslog.lua")
-		uriBuilder.addParameter('sid',sid)
-		uriBuilder.addParameter('tab',eventType.tab)
-		return uriBuilder.build().toURL()
+		uriBuilder.addParameter('sid', sid)
+		uriBuilder.addParameter('tab', eventType.tab)
+		URL syslogUrl
+		try {
+			syslogUrl = uriBuilder.build().toURL()
+		} catch (URISyntaxException | MalformedURLException e) {
+			throw new EventGrabberException("Unable to create syslog URL", e)
+		}
+		return syslogUrl
 	}
 
 	/**
@@ -65,8 +98,16 @@ class FritzBoxEventGrabber {
 		DateTimeFormatter dateTimeFormatter = getFritzBoxDateTimeFormatter()
 		return rows.collect { HtmlTableRow row ->
 			List<HtmlTableCell> cells = row.getCells()
+			if (cells.size() != NUMBER_OF_SYSLOG_COLUMNS) {
+				throw new EventGrabberException("Unexpected number of columns in syslog table. Expected $NUMBER_OF_SYSLOG_COLUMNS but was ${cells.size()}. Row contents: '${row.asText()}'")
+			}
 			String timestampString = cells[0].asText() + " " + cells[1].asText()
-			DateTime timestamp = dateTimeFormatter.parseDateTime(timestampString)
+			DateTime timestamp
+			try {
+				timestamp = dateTimeFormatter.parseDateTime(timestampString)
+			} catch (UnsupportedOperationException | IllegalArgumentException e) {
+				throw new EventGrabberException("Unable to parse date and time in syslog: $timestampString", e)
+			}
 			String message = cells[2].asText()
 			return new Event(timestamp: timestamp, message: message)
 		}

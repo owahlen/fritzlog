@@ -17,20 +17,19 @@ import java.text.NumberFormat
 class FritzBoxFacade {
 
 	private String host
+	private String password
 	private WebClient webClient
-	private FritzBoxAuthenticator fritzBoxAuthenticator
+	private String webClientOpener
 	private String sid = null
 
 	/**
 	 * Constructor for a new FritzBoxFacade
-	 * @param host hostname of the fritzbox or its IP address
+	 * @param host hostname of the Fritz!Box or its IP address
 	 * @param password login credential for the Fritz!Box web pages
 	 */
 	FritzBoxFacade(String host, String password) {
 		this.host = host
-		webClient = new WebClient()
-		webClient.getOptions().setCssEnabled(false)
-		fritzBoxAuthenticator = new FritzBoxAuthenticator(host: host, password: password, webClient: webClient)
+		this.password = password
 	}
 
 	/**
@@ -46,21 +45,18 @@ class FritzBoxFacade {
 
 	/**
 	 * Get the list of events stored in the Fritz!Box event log table
-	 * @return Reader for the event log table
+	 * @return List of Event instances representing rows of the event log
 	 */
 	List<Event> getEvents(EventType eventType) {
-		FritzBoxEventGrabber fritzBoxEventGrabber = new FritzBoxEventGrabber(host: host, sid: getSid(), webClient: webClient)
-		List<Event> events = fritzBoxEventGrabber.grabEvents(eventType)
-		webClient.closeAllWindows()
+		List<Event> events = null
+		try {
+			openWebClient("getEvents")
+			FritzBoxEventGrabber fritzBoxEventGrabber = new FritzBoxEventGrabber(host: host, sid: getSid(), webClient: webClient)
+			events = fritzBoxEventGrabber.grabEvents(eventType)
+		} finally {
+			closeWebClient("getEvents")
+		}
 		return events
-	}
-
-	/**
-	 * Invalidate the access token used to communicate with the Fritz!Box.
-	 * This forces re-authentication the next time the box is queried.
-	 */
-	void invalidateSession() {
-		sid == null
 	}
 
 	static Reader getAttendanceCsvReader(List<DailyMacAttendance> attendances) {
@@ -102,9 +98,47 @@ class FritzBoxFacade {
 	 */
 	private String getSid() {
 		if (sid == null) {
-			sid = fritzBoxAuthenticator.getSid()
+			try {
+				openWebClient("getSid")
+				FritzBoxAuthenticator fritzBoxAuthenticator = new FritzBoxAuthenticator(host: host, password: password, webClient: webClient)
+				sid = fritzBoxAuthenticator.getSid()
+			} finally {
+				closeWebClient("getSid")
+			}
 		}
 		return sid
+	}
+
+	/**
+	 * Create a new WebClient if it does not yet exist and initialize it for communication with the Fritz!Box.
+	 * If a new WebClient is created remember the handle for the opener.
+	 * This ensures that nested methods can work with the same WebClient and the outer most method closes
+	 * it after usage.
+	 * @param webClientOpener handle for the method that tries to open the WebClient
+	 */
+	private void openWebClient(String webClientOpener) {
+		if (webClient == null) {
+			webClient = new WebClient()
+			webClient.getOptions().setCssEnabled(false)
+			assert null == this.webClientOpener
+			this.webClientOpener = webClientOpener
+		}
+	}
+
+	/**
+	 * Close the webClient that has previously been opened.
+	 * The closing only happens if the method that requests the closing has also opened it.
+	 * This is ensured if opening and closing is done with the same webClientOpener String.
+	 * @param webClientOpener handle for the method that has tried to open the WebClient before
+	 */
+	private void closeWebClient(String webClientOpener) {
+		assert null != this.webClient
+		assert null != this.webClientOpener
+		if (webClientOpener == this.webClientOpener) {
+			webClient.closeAllWindows()
+			webClient = null
+			sid == null
+		}
 	}
 
 }
