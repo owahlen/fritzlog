@@ -7,7 +7,7 @@ log4j {
 
 	logger {
 		com.infinit.fritzlog = 'WARN'
-		org.apache.http.wire = 'DEBUG'
+//		org.apache.http.wire = 'DEBUG'
 	}
 
 }

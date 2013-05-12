@@ -1,10 +1,10 @@
 package com.infinit.fritzlog.event
 
-import groovy.util.slurpersupport.GPathResult
-import groovyx.net.http.ContentType
-import groovyx.net.http.HTTPBuilder
-import groovyx.net.http.Method
-import org.apache.http.HttpResponse
+import com.gargoylesoftware.htmlunit.WebClient
+import com.gargoylesoftware.htmlunit.html.HtmlPage
+import com.gargoylesoftware.htmlunit.html.HtmlTableCell
+import com.gargoylesoftware.htmlunit.html.HtmlTableRow
+import org.apache.http.client.utils.URIBuilder
 import org.joda.time.DateTime
 import org.joda.time.DateTimeZone
 import org.joda.time.format.DateTimeFormat
@@ -14,59 +14,69 @@ import org.joda.time.format.DateTimeFormatter
  * Extract Events from the Fritz!Box System->Events menu
  */
 class FritzBoxEventGrabber {
-	private HTTPBuilder httpBuilder
-	private String sid
+
+	String sid
+
+	private String host
+	private WebClient webClient
 
 	/**
-	 * Setter for the Fritz Box domain name or IP address
-	 * @param fritzHost domain or IP address
+	 * Grab the events from the Fritz!Box event log
+	 * @param eventType type of events to be fetched
+	 * @return list of Events
 	 */
-	void setHost(String fritzHost) {
-		String url = "http://${fritzHost}/system/syslog.lua"
-		httpBuilder = new HTTPBuilder(url)
-	}
-
 	List<Event> grabEvents(EventType eventType) {
-		GPathResult syslogPage = getSyslogPage(eventType)
+		HtmlPage syslogPage = getSyslogPage(eventType)
 		List<Event> events = extractEventsFromSyslogPage(syslogPage)
 		events.sort { it.timestamp }
 		return events
 	}
 
 	/**
-	 * Get the relevant web page from the event log.
-	 * @param challengeResponse to be sent to the Fritz Box
-	 * @return session id (sid)
+	 * Get the content of the syslog page as xml string
+	 * @param eventType the type of events that are supposed to be extracted
+	 * @return content of the systlog page as XML string
 	 */
-	private GPathResult getSyslogPage(EventType eventType) {
-		GPathResult syslogPage = null
-		httpBuilder.request(Method.GET, ContentType.HTML) {
-			uri.query = ['sid': sid, 'tab': eventType.tab]
-
-			response.success = { HttpResponse resp, GPathResult html ->
-				syslogPage = html
-			}
-		}
+	private HtmlPage getSyslogPage(EventType eventType) {
+		URL syslogUrl = createSyslogUrl(eventType)
+		HtmlPage syslogPage = webClient.getPage(syslogUrl)
 		return syslogPage
 	}
 
 	/**
+	 * Create the URL in order to receive the systlog
+	 * @param eventType the type of events that are supposed to be extracted
+	 * @return URL of the syslog page
+	 */
+	private URL createSyslogUrl(EventType eventType) {
+		URIBuilder uriBuilder = new URIBuilder("http://${host}/system/syslog.lua")
+		uriBuilder.addParameter('sid',sid)
+		uriBuilder.addParameter('tab',eventType.tab)
+		return uriBuilder.build().toURL()
+	}
+
+	/**
 	 * Populate the list of Event instances from the html page of the Fritz!Box
-	 * @param syslogPage the GPathResult representing the syslog page
+	 * @param syslogXml the GPathResult representing the syslog page
 	 * @return the list of Event instances
 	 */
-	private List<Event> extractEventsFromSyslogPage(GPathResult syslogPage) {
-		GPathResult contentDiv = (GPathResult) syslogPage.depthFirst().find { it.name() == 'DIV' && it.@id == 'page_content' }
-		List<GPathResult> rows = contentDiv.depthFirst().findAll { it.name() == 'TR' }
+	private List<Event> extractEventsFromSyslogPage(HtmlPage syslogPage) {
+		List<HtmlTableRow> rows = (List<HtmlTableRow>) syslogPage.getByXPath("//tr")
 		DateTimeFormatter dateTimeFormatter = getFritzBoxDateTimeFormatter()
-		return rows.collect { GPathResult row ->
-			String timestampString = row.TD[0].text() + " " + row.TD[1].text()
+		return rows.collect { HtmlTableRow row ->
+			List<HtmlTableCell> cells = row.getCells()
+			String timestampString = cells[0].asText() + " " + cells[1].asText()
 			DateTime timestamp = dateTimeFormatter.parseDateTime(timestampString)
-			String message = row.TD[2].text()
+			String message = cells[2].asText()
 			return new Event(timestamp: timestamp, message: message)
 		}
 	}
 
+	/**
+	 * Get a DateTimeFormatter that is capable of parsing the date time format presented
+	 * in the Fritz!Box event log.
+	 * @return new DateTimeFormatter instance
+	 */
 	private DateTimeFormatter getFritzBoxDateTimeFormatter() {
 		// According to Hotline this is hardcoded into the box
 		DateTimeZone fritzBoxTimeZone = DateTimeZone.forID("Europe/Berlin")
