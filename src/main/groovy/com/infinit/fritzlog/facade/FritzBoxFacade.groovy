@@ -5,6 +5,7 @@ import com.infinit.fritzlog.authenticator.FritzBoxAuthenticator
 import com.infinit.fritzlog.event.Event
 import com.infinit.fritzlog.event.EventType
 import com.infinit.fritzlog.event.FritzBoxEventGrabber
+import com.infinit.fritzlog.reporting.AttendanceDecorator
 import com.infinit.fritzlog.reporting.DailyMacAttendance
 import com.infinit.fritzlog.reporting.EventAggregator
 import org.joda.time.DateTimeConstants
@@ -19,8 +20,9 @@ class FritzBoxFacade {
 	private String host
 	private String password
 	private WebClient webClient
-	private String webClientOpener
+	private Integer webClientNestingLevel = 0
 	private String sid = null
+	private AttendanceDecorator attendanceDecorator
 
 	/**
 	 * Constructor for a new FritzBoxFacade
@@ -39,8 +41,11 @@ class FritzBoxFacade {
 	List<DailyMacAttendance> getDailyMacAttendances() {
 		List<Event> events = getEvents(EventType.WLAN)
 		EventAggregator eventAggregator = new EventAggregator()
-		return eventAggregator.getDailyMacAttendances(events)
-
+		List<DailyMacAttendance> dailyMacAttendances = eventAggregator.getDailyMacAttendances(events)
+		if(attendanceDecorator) {
+			attendanceDecorator.decorateDailyMacAttendances(dailyMacAttendances)
+		}
+		return dailyMacAttendances
 	}
 
 	/**
@@ -50,13 +55,17 @@ class FritzBoxFacade {
 	List<Event> getEvents(EventType eventType) {
 		List<Event> events = null
 		try {
-			openWebClient("getEvents")
+			openWebClient()
 			FritzBoxEventGrabber fritzBoxEventGrabber = new FritzBoxEventGrabber(host: host, sid: getSid(), webClient: webClient)
 			events = fritzBoxEventGrabber.grabEvents(eventType)
 		} finally {
-			closeWebClient("getEvents")
+			closeWebClient()
 		}
 		return events
+	}
+
+	void setMacInfo(URL macInfo) {
+		 attendanceDecorator = new AttendanceDecorator(macInfo)
 	}
 
 	static Reader getAttendanceCsvReader(List<DailyMacAttendance> attendances) {
@@ -68,6 +77,7 @@ class FritzBoxFacade {
 			List<String> fields = []
 			fields << dateFormatter.print(it.date)
 			fields << it.macAddress
+			fields << it.alias?:""
 			if (it.firstLogOn != null) {
 				fields << timeFormatter.print(it.firstLogOn)
 			} else {
@@ -99,11 +109,11 @@ class FritzBoxFacade {
 	private String getSid() {
 		if (sid == null) {
 			try {
-				openWebClient("getSid")
+				openWebClient()
 				FritzBoxAuthenticator fritzBoxAuthenticator = new FritzBoxAuthenticator(host: host, password: password, webClient: webClient)
 				sid = fritzBoxAuthenticator.getSid()
 			} finally {
-				closeWebClient("getSid")
+				closeWebClient()
 			}
 		}
 		return sid
@@ -111,34 +121,36 @@ class FritzBoxFacade {
 
 	/**
 	 * Create a new WebClient if it does not yet exist and initialize it for communication with the Fritz!Box.
-	 * If a new WebClient is created remember the handle for the opener.
-	 * This ensures that nested methods can work with the same WebClient and the outer most method closes
-	 * it after usage.
 	 * @param webClientOpener handle for the method that tries to open the WebClient
 	 */
-	private void openWebClient(String webClientOpener) {
-		if (webClient == null) {
+	private void openWebClient() {
+		if (webClientNestingLevel == 0) {
+			// there should not be a WebClient in nesting level 0
+			assert null == this.webClient
 			webClient = new WebClient()
 			webClient.getOptions().setCssEnabled(false)
-			assert null == this.webClientOpener
-			this.webClientOpener = webClientOpener
+		} else {
+			// there should already be a WebClient opened by some outer method call
+			assert null != this.webClient
+			assert 0 < webClientNestingLevel
 		}
+		webClientNestingLevel += 1
 	}
 
 	/**
 	 * Close the webClient that has previously been opened.
-	 * The closing only happens if the method that requests the closing has also opened it.
-	 * This is ensured if opening and closing is done with the same webClientOpener String.
 	 * @param webClientOpener handle for the method that has tried to open the WebClient before
 	 */
-	private void closeWebClient(String webClientOpener) {
+	private void closeWebClient() {
 		assert null != this.webClient
-		assert null != this.webClientOpener
-		if (webClientOpener == this.webClientOpener) {
+		assert 0 < this.webClientNestingLevel
+		if (webClientNestingLevel == 1) {
+			// we are entering nesting level 0 so everything must be closed
 			webClient.closeAllWindows()
 			webClient = null
 			sid == null
 		}
+		webClientNestingLevel -= 1
 	}
 
 }

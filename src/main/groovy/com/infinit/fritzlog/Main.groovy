@@ -16,6 +16,7 @@ class Main {
 	static main(args) {
 		configureLogger()
 		FritzBoxFacade facade = new FritzBoxFacade("192.168.2.1", "gomfia")
+		facade.setMacInfo(Main.getResource('/macInfo.groovy'))
 		List<DailyMacAttendance> dailyMacAttendances = facade.getDailyMacAttendances()
 		Reader reader = facade.getAttendanceCsvReader(dailyMacAttendances)
 		System.out << reader
