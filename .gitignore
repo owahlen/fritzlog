@@ -19,6 +19,7 @@
 .idea
 .DS_Store
 
-# Build Results #
+# Build System #
+.gradle
 build
 out
