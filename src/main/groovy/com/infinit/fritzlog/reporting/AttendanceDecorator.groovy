@@ -13,7 +13,7 @@ class AttendanceDecorator {
 
 	void decorateDailyMacAttendances(List<DailyMacAttendance> dailyMacAttendances) {
 		dailyMacAttendances.each { DailyMacAttendance attendance ->
-			ConfigObject macConfig = macInfoConfig.macInfo[attendance.macAddress]
+			ConfigObject macConfig = (ConfigObject) macInfoConfig.macInfo[attendance.macAddress]
 			attendance.alias = macConfig ? macConfig.alias : null
 		}
 	}

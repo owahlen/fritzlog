@@ -1,9 +1,7 @@
 package com.infinit.fritzlog.event
 
-import com.gargoylesoftware.htmlunit.ElementNotFoundException
 import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException
 import com.gargoylesoftware.htmlunit.WebClient
-import com.gargoylesoftware.htmlunit.html.HtmlElement
 import com.gargoylesoftware.htmlunit.html.HtmlPage
 import com.gargoylesoftware.htmlunit.html.HtmlTableCell
 import com.gargoylesoftware.htmlunit.html.HtmlTableRow
@@ -13,8 +11,6 @@ import org.joda.time.DateTime
 import org.joda.time.DateTimeZone
 import org.joda.time.format.DateTimeFormat
 import org.joda.time.format.DateTimeFormatter
-
-import javax.naming.AuthenticationException
 
 /**
  * Extract Events from the Fritz!Box System->Events menu
