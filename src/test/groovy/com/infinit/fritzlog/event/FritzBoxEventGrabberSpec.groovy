@@ -6,7 +6,6 @@ import com.gargoylesoftware.htmlunit.html.HtmlForm
 import com.gargoylesoftware.htmlunit.html.HtmlPage
 import com.gargoylesoftware.htmlunit.html.HtmlTableDataCell
 import com.gargoylesoftware.htmlunit.html.HtmlTableRow
-import com.infinit.fritzlog.authenticator.FritzBoxAuthenticator
 import com.infinit.fritzlog.exceptions.EventGrabberException
 import org.joda.time.DateTime
 import spock.lang.Specification

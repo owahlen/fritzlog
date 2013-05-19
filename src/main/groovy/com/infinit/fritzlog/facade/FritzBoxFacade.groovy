@@ -77,7 +77,7 @@ class FritzBoxFacade {
 			List<String> fields = []
 			fields << dateFormatter.print(it.date)
 			fields << it.macAddress
-			fields << it.alias?:""
+			fields << (it.alias?:"")
 			if (it.firstLogOn != null) {
 				fields << timeFormatter.print(it.firstLogOn)
 			} else {
@@ -88,7 +88,7 @@ class FritzBoxFacade {
 			} else {
 				fields << ""
 			}
-			if (it.firstLogOn != null && it.lastLogOff != null) {
+			if (it.firstLogOn != null && it.lastLogOff != null && it.firstLogOn <= it.lastLogOff) {
 				fields << nf.format(
 						BigDecimal.valueOf(Seconds.secondsBetween(it.firstLogOn, it.lastLogOff).seconds)
 								.divide(DateTimeConstants.SECONDS_PER_HOUR, 2, RoundingMode.HALF_DOWN)
