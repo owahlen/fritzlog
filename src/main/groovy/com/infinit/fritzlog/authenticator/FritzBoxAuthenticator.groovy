@@ -68,8 +68,8 @@ class FritzBoxAuthenticator {
 	private void validateLoginSuccessful(HtmlPage homePage) {
 		if (homePage.getFirstByXPath("//input[@type='password']") != null) {
 			// the page contains a password field which means that the login went wrong
-			HtmlParagraph errorParagraph = homePage.getFirstByXPath("//p[@class='ErrorMsg']")
-			throw new AuthenticationException("Login into Fritz!Box failed: " + errorParagraph ? errorParagraph.asText() : "unknown error")
+			HtmlParagraph errorParagraph = homePage.getFirstByXPath("//p[@class='error_text']")
+			throw new AuthenticationException("Login into Fritz!Box failed: " + (errorParagraph ? errorParagraph.asText() : "unknown error"))
 		}
 	}
 
