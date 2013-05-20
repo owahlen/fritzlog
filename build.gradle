@@ -2,6 +2,7 @@ apply plugin: 'java'
 apply plugin: 'groovy'
 apply plugin: 'application'
 apply plugin: 'idea'
+apply plugin: 'maven'
 
 def jdkVersion = '1.6'
 
@@ -9,6 +10,9 @@ sourceCompatibility = jdkVersion
 targetCompatibility = jdkVersion
 
 mainClassName = 'com.infinit.fritzlog.Main'
+
+group = 'com.infinit.fritzlog'
+version = '1.0'
 
 // The idea closure configure the idea plugin.
 // The command "gradle idea" will setup a reasonable idea structure
